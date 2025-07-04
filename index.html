@@ -1,0 +1,427 @@
+<!DOCTYPE html>
+<html lang="tr">
+
+<head>
+    <meta charset="UTF-8">
+    <title>TikTok API Test</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        .button {
+            background-color: #ff0050;
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+            margin-top: 15px;
+        }
+
+        .button:hover {
+            background-color: #e6004a;
+        }
+
+        input {
+            width: calc(100% - 22px);
+            padding: 10px;
+            margin-bottom: 10px;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+        }
+
+        .status {
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 5px;
+            word-wrap: break-word;
+        }
+
+        .success {
+            background-color: #d4edda;
+            color: #155724;
+        }
+
+        .error {
+            background-color: #f8d7da;
+            color: #721c24;
+        }
+
+        .info {
+            background-color: #d1ecf1;
+            color: #0c5460;
+        }
+
+        pre {
+            background-color: #f4f4f4;
+            padding: 10px;
+            border-radius: 5px;
+            overflow-x: auto;
+        }
+
+        .auth-container {
+            border: 1px solid #ddd;
+            padding: 20px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+        }
+
+        .tab-buttons {
+            display: flex;
+            border-bottom: 1px solid #ddd;
+            margin-bottom: 20px;
+        }
+
+        .tab-button {
+            padding: 10px 20px;
+            cursor: pointer;
+            border: none;
+            background-color: transparent;
+            font-size: 18px;
+            border-bottom: 3px solid transparent;
+        }
+
+        .tab-button.active {
+            border-bottom: 3px solid #ff0050;
+            font-weight: bold;
+        }
+
+        .form-section {
+            display: none;
+        }
+
+        .form-section.active {
+            display: block;
+        }
+
+        .api-info {
+            background-color: #f0f8ff;
+            padding: 15px;
+            border-radius: 5px;
+            margin-bottom: 20px;
+        }
+    </style>
+</head>
+
+<body>
+    <h1>TikTok API Test Arayüzü</h1>
+
+    <div class="api-info">
+        <strong>API Durumu:</strong> <span id="apiStatus">Kontrol ediliyor...</span><br>
+        <strong>API URL:</strong> <span id="apiUrl"></span>
+    </div>
+
+    <div class="auth-container">
+        <div class="tab-buttons">
+            <button id="loginTabButton" class="tab-button active" onclick="showForm('login')">Giriş Yap</button>
+            <button id="registerTabButton" class="tab-button" onclick="showForm('register')">Kayıt Ol</button>
+        </div>
+
+        <div id="loginForm" class="form-section active">
+            <h2>Sisteme Giriş</h2>
+            <input type="text" id="username" placeholder="Kullanıcı adı" value="testuser">
+            <input type="password" id="password" placeholder="Şifre" value="Test123456!">
+            <button class="button" onclick="login()">Giriş Yap</button>
+            <div id="loginStatus" class="status"></div>
+        </div>
+
+        <div id="registerForm" class="form-section">
+            <h2>Yeni Hesap Oluştur</h2>
+            <input type="text" id="reg_username" placeholder="Kullanıcı Adı">
+            <input type="email" id="reg_email" placeholder="E-posta Adresi">
+            <input type="text" id="reg_fullname" placeholder="Tam Ad (İsteğe bağlı)">
+            <input type="password" id="reg_password" placeholder="Şifre (En az 8 karakter)">
+            <button class="button" onclick="register()">Hesap Oluştur</button>
+            <div id="registerStatus" class="status"></div>
+        </div>
+    </div>
+
+    <div id="tiktokSection" style="display:none;">
+        <h2>2. TikTok Bağlantısı</h2>
+        <button class="button" onclick="connectTikTok()">TikTok'a Bağlan</button>
+        <div id="tiktokStatus"></div>
+    </div>
+
+    <div id="dataSection" style="display:none;">
+        <h2>3. Veri Çekme</h2>
+        <button class="button" onclick="getUserInfo()">Kullanıcı Bilgileri</button>
+        <button class="button" onclick="getVideos()">Videoları Getir</button>
+        <button class="button" onclick="syncData()">Tüm Veriyi Senkronize Et</button>
+        <button class="button" onclick="getAnalytics()">Analytics Özeti</button>
+        <div id="dataStatus"></div>
+        <pre id="dataResult"></pre>
+    </div>
+
+    <script>
+        // API URL'i - otomatik olarak mevcut host'u kullan
+        const API_URL = window.location.origin;
+        // Eğer farklı bir port veya ngrok kullanıyorsanız:
+        // const API_URL = 'http://127.0.0.1:8000';
+        // const API_URL = 'https://your-ngrok-url.ngrok-free.app';
+
+        let authToken = localStorage.getItem('authToken');
+
+        // API durumunu kontrol et
+        async function checkAPIStatus() {
+            const statusEl = document.getElementById('apiStatus');
+            const urlEl = document.getElementById('apiUrl');
+            urlEl.textContent = API_URL;
+
+            try {
+                const response = await fetch(`${API_URL}/health`, {
+                    headers: {
+                        'ngrok-skip-browser-warning': 'true'
+                    }
+                });
+                if (response.ok) {
+                    const data = await response.json();
+                    statusEl.innerHTML = `<span style="color: green;">✓ Çalışıyor (v${data.version})</span>`;
+                } else {
+                    throw new Error('API yanıt vermiyor');
+                }
+            } catch (error) {
+                statusEl.innerHTML = `<span style="color: red;">✗ Bağlantı hatası</span>`;
+                console.error('API bağlantı hatası:', error);
+            }
+        }
+
+        // Sayfa yüklendiğinde API durumunu kontrol et
+        window.onload = function () {
+            checkAPIStatus();
+            if (authToken) {
+                document.getElementById('tiktokSection').style.display = 'block';
+                document.getElementById('dataSection').style.display = 'block';
+            }
+        };
+
+        function showForm(formName) {
+            document.getElementById('loginForm').classList.remove('active');
+            document.getElementById('registerForm').classList.remove('active');
+            document.getElementById('loginTabButton').classList.remove('active');
+            document.getElementById('registerTabButton').classList.remove('active');
+
+            if (formName === 'login') {
+                document.getElementById('loginForm').classList.add('active');
+                document.getElementById('loginTabButton').classList.add('active');
+            } else {
+                document.getElementById('registerForm').classList.add('active');
+                document.getElementById('registerTabButton').classList.add('active');
+            }
+        }
+
+        async function register() {
+            const registerStatus = document.getElementById('registerStatus');
+            const userData = {
+                username: document.getElementById('reg_username').value,
+                email: document.getElementById('reg_email').value,
+                password: document.getElementById('reg_password').value,
+                full_name: document.getElementById('reg_fullname').value
+            };
+
+            if (!userData.username || !userData.email || !userData.password) {
+                registerStatus.innerHTML = `<div class="status error">Kullanıcı adı, e-posta ve şifre alanları zorunludur.</div>`;
+                return;
+            }
+
+            registerStatus.innerHTML = `<div class="status info">Hesap oluşturuluyor...</div>`;
+
+            try {
+                const response = await fetch(`${API_URL}/api/v1/auth/register`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'ngrok-skip-browser-warning': 'true'
+                    },
+                    body: JSON.stringify(userData)
+                });
+
+                const data = await response.json();
+
+                if (response.ok) {
+                    registerStatus.innerHTML = `<div class="status success">Kayıt başarılı! Şimdi 'Giriş Yap' sekmesinden giriş yapabilirsiniz.</div>`;
+                    // Formu temizle
+                    document.getElementById('reg_username').value = '';
+                    document.getElementById('reg_email').value = '';
+                    document.getElementById('reg_password').value = '';
+                    document.getElementById('reg_fullname').value = '';
+                } else {
+                    throw new Error(data.detail || 'Kayıt işlemi başarısız oldu.');
+                }
+            } catch (error) {
+                registerStatus.innerHTML = `<div class="status error">Hata: ${error.message}</div>`;
+            }
+        }
+
+        async function login() {
+            const loginStatus = document.getElementById('loginStatus');
+            const username = document.getElementById('username').value;
+            const password = document.getElementById('password').value;
+
+            loginStatus.innerHTML = `<div class="status info">Giriş yapılıyor...</div>`;
+
+            try {
+                const response = await fetch(`${API_URL}/api/v1/auth/login`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/x-www-form-urlencoded',
+                        'ngrok-skip-browser-warning': 'true'
+                    },
+                    body: `username=${username}&password=${password}`
+                });
+
+                const data = await response.json();
+
+                if (response.ok) {
+                    authToken = data.access_token;
+                    localStorage.setItem('authToken', authToken);
+
+                    loginStatus.innerHTML = '<div class="status success">Giriş başarılı!</div>';
+                    document.getElementById('tiktokSection').style.display = 'block';
+                    document.getElementById('dataSection').style.display = 'block';
+                } else {
+                    throw new Error(data.detail || 'Giriş başarısız');
+                }
+            } catch (error) {
+                loginStatus.innerHTML = `<div class="status error">Hata: ${error.message}</div>`;
+            }
+        }
+
+        async function connectTikTok() {
+            try {
+                const response = await fetch(`${API_URL}/api/v1/auth/tiktok/authorize`, {
+                    headers: {
+                        'Authorization': `Bearer ${authToken}`,
+                        'ngrok-skip-browser-warning': 'true'
+                    }
+                });
+                const data = await response.json();
+                if (response.ok) {
+                    document.getElementById('tiktokStatus').innerHTML =
+                        '<div class="status info">TikTok\'a yönlendiriliyorsunuz...</div>';
+                    localStorage.setItem('oauth_state', data.state);
+                    window.location.href = data.authorization_url;
+                }
+            } catch (error) {
+                document.getElementById('tiktokStatus').innerHTML =
+                    `<div class="status error">Hata: ${error.message}</div>`;
+            }
+        }
+
+        async function getUserInfo() {
+            try {
+                const response = await fetch(`${API_URL}/api/v1/tiktok/user/info`, {
+                    headers: {
+                        'Authorization': `Bearer ${authToken}`,
+                        'ngrok-skip-browser-warning': 'true'
+                    }
+                });
+                const data = await response.json();
+                if (response.ok) {
+                    document.getElementById('dataStatus').innerHTML =
+                        '<div class="status success">Kullanıcı bilgileri alındı</div>';
+                    document.getElementById('dataResult').textContent =
+                        JSON.stringify(data, null, 2);
+                } else {
+                    throw new Error(data.detail || 'Veri alınamadı');
+                }
+            } catch (error) {
+                document.getElementById('dataStatus').innerHTML =
+                    `<div class="status error">Hata: ${error.message}</div>`;
+            }
+        }
+
+        async function getVideos() {
+            try {
+                const response = await fetch(`${API_URL}/api/v1/tiktok/videos?max_count=5`, {
+                    headers: {
+                        'Authorization': `Bearer ${authToken}`,
+                        'ngrok-skip-browser-warning': 'true'
+                    }
+                });
+                const data = await response.json();
+                if (response.ok) {
+                    document.getElementById('dataStatus').innerHTML =
+                        `<div class="status success">${data.videos.length} video bulundu</div>`;
+                    document.getElementById('dataResult').textContent =
+                        JSON.stringify(data, null, 2);
+                    if (data.videos.length > 0) {
+                        const videoIds = data.videos.map(v => v.id);
+                        localStorage.setItem('videoIds', JSON.stringify(videoIds));
+                    }
+                } else {
+                    throw new Error(data.detail || 'Videolar alınamadı');
+                }
+            } catch (error) {
+                document.getElementById('dataStatus').innerHTML =
+                    `<div class="status error">Hata: ${error.message}</div>`;
+            }
+        }
+
+        async function syncData() {
+            try {
+                document.getElementById('dataStatus').innerHTML =
+                    '<div class="status info">Senkronizasyon başlatıldı...</div>';
+                const response = await fetch(`${API_URL}/api/v1/tiktok/sync`, {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${authToken}`,
+                        'ngrok-skip-browser-warning': 'true'
+                    }
+                });
+                const data = await response.json();
+                if (response.ok) {
+                    document.getElementById('dataStatus').innerHTML =
+                        `<div class="status success">Senkronizasyon tamamlandı: ${data.videos_synced} video</div>`;
+                    document.getElementById('dataResult').textContent =
+                        JSON.stringify(data, null, 2);
+                } else {
+                    throw new Error(data.detail || 'Senkronizasyon başarısız');
+                }
+            } catch (error) {
+                document.getElementById('dataStatus').innerHTML =
+                    `<div class="status error">Hata: ${error.message}</div>`;
+            }
+        }
+
+        async function getAnalytics() {
+            try {
+                const response = await fetch(`${API_URL}/api/v1/tiktok/analytics/summary`, {
+                    headers: {
+                        'Authorization': `Bearer ${authToken}`,
+                        'ngrok-skip-browser-warning': 'true'
+                    }
+                });
+                const data = await response.json();
+                if (response.ok) {
+                    document.getElementById('dataStatus').innerHTML =
+                        '<div class="status success">Analytics verisi alındı</div>';
+                    document.getElementById('dataResult').textContent =
+                        JSON.stringify(data, null, 2);
+                } else {
+                    throw new Error(data.detail || 'Analytics alınamadı');
+                }
+            } catch (error) {
+                document.getElementById('dataStatus').innerHTML =
+                    `<div class="status error">Hata: ${error.message}</div>`;
+            }
+        }
+
+        // OAuth callback'i kontrol et
+        const urlParams = new URLSearchParams(window.location.search);
+        const code = urlParams.get('code');
+        const state = urlParams.get('state');
+
+        if (code && state) {
+            document.getElementById('tiktokStatus').innerHTML =
+                '<div class="status info">TikTok bağlantısı tamamlanıyor...</div>';
+            window.history.replaceState({}, document.title, "/");
+        }
+    </script>
+</body>
+
+</html>
