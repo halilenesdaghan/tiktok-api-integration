@@ -32,7 +32,6 @@ class TestSettings(Settings):
     # Test security keys
     SECRET_KEY: str = "test-secret-key-for-testing-only-32-chars-long!"
     TOKEN_ENCRYPTION_KEY: str = "test-encryption-key-32-bytes-lng"
-    TOKEN_ENCRYPTION_SALT: str = "test-salt-16byte"
     
     class Config:
         env_file = ".env.test"

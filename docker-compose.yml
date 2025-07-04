@@ -1,8 +1,4 @@
-# docker-compose.yml
-version: '3.8'
-
 services:
-  # FastAPI Web Application
   web:
     build:
       context: .
@@ -11,23 +7,19 @@ services:
     ports:
       - "8000:8000"
     environment:
-      # Database
+      # Veritabanı ve Redis ayarları
       - DATABASE_URL=postgresql://postgres:password@db:5432/tiktok_api_db
-      # Redis
       - REDIS_URL=redis://redis:6379/0
-      # Application Settings
-      - ENVIRONMENT=development
-      - DEBUG=True
-      # TikTok API (bu değerleri .env dosyasından alacak)
+      
+      # .env dosyasından okunacak diğer tüm ayarlar
+      - ENVIRONMENT=${ENVIRONMENT}
+      - DEBUG=${DEBUG}
       - TIKTOK_CLIENT_KEY=${TIKTOK_CLIENT_KEY}
       - TIKTOK_CLIENT_SECRET=${TIKTOK_CLIENT_SECRET}
       - TIKTOK_REDIRECT_URI=${TIKTOK_REDIRECT_URI}
-      # Security
       - SECRET_KEY=${SECRET_KEY}
       - TOKEN_ENCRYPTION_KEY=${TOKEN_ENCRYPTION_KEY} # Sadece bu anahtar yeterli
-      - TIKTOK_API_VERSION=v2
-      - TIKTOK_COMMERCIAL_API_ENABLED=${TIKTOK_COMMERCIAL_API_ENABLED:-false}
-      - LOG_LEVEL=debug
+
     depends_on:
       - db
       - redis
@@ -37,7 +29,6 @@ services:
     networks:
       - tiktok-network
 
-  # PostgreSQL Database
   db:
     image: postgres:15-alpine
     container_name: tiktok-api-db
@@ -47,8 +38,6 @@ services:
       - POSTGRES_PASSWORD=password
     volumes:
       - postgres_data:/var/lib/postgresql/data
-      # init-db.sql dosyası projenizde görünmüyor, eğer yoksa bu satırı silebilirsiniz.
-      # - ./init-db.sql:/docker-entrypoint-initdb.d/init-db.sql:ro
     ports:
       - "5432:5432"
     networks:
@@ -59,64 +48,22 @@ services:
       timeout: 5s
       retries: 5
 
-  # Redis Cache
   redis:
     image: redis:7-alpine
     container_name: tiktok-api-redis
     ports:
       - "6379:6379"
-    volumes:
-      - redis_data:/data
     networks:
       - tiktok-network
-    command: redis-server --appendonly yes
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
       interval: 10s
       timeout: 5s
       retries: 5
 
-  # Nginx Reverse Proxy (Production için)
-  nginx:
-    image: nginx:alpine
-    container_name: tiktok-api-nginx
-    ports:
-      - "80:80"
-      - "443:443"
-    volumes:
-      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
-      - ./nginx/ssl:/etc/nginx/ssl:ro
-    depends_on:
-      - web
-    networks:
-      - tiktok-network
-    profiles:
-      - production
-
-  # PgAdmin (Database management)
-  pgadmin:
-    image: dpage/pgadmin4:latest
-    container_name: tiktok-api-pgadmin
-    environment:
-      - PGADMIN_DEFAULT_EMAIL=admin@example.com
-      - PGADMIN_DEFAULT_PASSWORD=admin
-    ports:
-      - "5050:80"
-    depends_on:
-      - db
-    networks:
-      - tiktok-network
-    profiles:
-      - development
-
-# Volumes
 volumes:
   postgres_data:
-    driver: local
-  redis_data:
-    driver: local
 
-# Networks
 networks:
   tiktok-network:
     driver: bridge
