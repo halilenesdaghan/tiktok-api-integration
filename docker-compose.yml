@@ -24,8 +24,7 @@ services:
       - TIKTOK_REDIRECT_URI=${TIKTOK_REDIRECT_URI}
       # Security
       - SECRET_KEY=${SECRET_KEY}
-      - TOKEN_ENCRYPTION_KEY=${TOKEN_ENCRYPTION_KEY}
-      - TOKEN_ENCRYPTION_SALT=${TOKEN_ENCRYPTION_SALT}
+      - TOKEN_ENCRYPTION_KEY=${TOKEN_ENCRYPTION_KEY} # Sadece bu anahtar yeterli
       - TIKTOK_API_VERSION=v2
       - TIKTOK_COMMERCIAL_API_ENABLED=${TIKTOK_COMMERCIAL_API_ENABLED:-false}
       - LOG_LEVEL=debug
@@ -48,7 +47,8 @@ services:
       - POSTGRES_PASSWORD=password
     volumes:
       - postgres_data:/var/lib/postgresql/data
-      - ./init-db.sql:/docker-entrypoint-initdb.d/init-db.sql:ro
+      # init-db.sql dosyası projenizde görünmüyor, eğer yoksa bu satırı silebilirsiniz.
+      # - ./init-db.sql:/docker-entrypoint-initdb.d/init-db.sql:ro
     ports:
       - "5432:5432"
     networks:

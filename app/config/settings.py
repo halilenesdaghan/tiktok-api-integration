@@ -32,18 +32,15 @@ class Settings(BaseSettings):
     TIKTOK_REDIRECT_URI: str
 
     # TOKEN ŞİFRELEME (Fernet)
-    FERNET_KEY: str ="L8poBUJPRWeYJudhwR9k_j9u7xyEkOts0j1kskJdQaA="
-    TOKEN_ENCRYPTION_KEY: str = "L8poBUJPRWeYJudhwR9k_j9u7xyEkOts0j1kskJdQaA="
+    TOKEN_ENCRYPTION_KEY: str # Hard-coded değeri kaldırıp, .env'den okunmasını zorunlu hale getirdik.
 
     # API & CORS
     API_V1_STR: str = "/api/v1"
     DOCS_URL: str = "/api/v1/docs"
     REDOC_URL: str = "/api/v1/redoc"
     
-    # Frontend uygulamanızın adresleri (virgülle ayırın)
     CORS_ORIGINS: str = "http://localhost:3000,http://127.0.0.1:5500"
     
-    # Rate Limiting
     RATE_LIMIT_PER_MINUTE: int = 60
 
     class Config:
@@ -51,5 +48,4 @@ class Settings(BaseSettings):
         env_file_encoding = 'utf-8'
         case_sensitive = True
 
-# Ayarları kullanmak için bir nesne oluştur
 settings = Settings()
