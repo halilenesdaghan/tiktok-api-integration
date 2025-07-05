@@ -16,7 +16,7 @@ app.secret_key = os.urandom(24)
 # Bu bilgileri doğrudan koda yazmak yerine .env dosyasından çekmek daha güvenlidir.
 # os.getenv("TIKTOK_CLIENT_KEY", "sbawyis5zxfdx5u341") şeklinde kullanılabilir.
 TIKTOK_CLIENT_KEY = "sbawyis5zxfdx5u341"
-TIKTOK_CLIENT_SECRET = "9zTG7pVM8Tuoh128oHTgtxvMcJiJHzekH8fz0D7RqHI"
+TIKTOK_CLIENT_SECRET = "BDPAJngaSW97LPMn0vvNmnmziOQ16fW1"
 
 # Uygulama ayarlarında belirttiğimiz Geri Arama (Callback) URL'i
 # Kodun ve TikTok ayarlarının tutarlı olması çok önemli!
