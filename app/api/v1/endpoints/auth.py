@@ -92,7 +92,7 @@ async def login_tiktok():
     state = secrets.token_urlsafe(16)
     
     # Kapsamları (scopes) ihtiyacınıza göre düzenleyin
-    scopes = "user.info.basic,video.list" 
+    scopes = "user.info.basic,video.list,artist.certification.read,artist.certification.update,user.info.profile,user.info.stats,video.list" 
 
     # Parametreleri oluştur
     params = {

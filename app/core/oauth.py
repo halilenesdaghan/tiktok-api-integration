@@ -32,51 +32,44 @@ class TikTokOAuth2:
         return code_verifier, code_challenge
 
     def get_authorization_url(self, state: Optional[str] = None) -> Tuple[str, str, str]:
-        """
-        TikTok yetkilendirme URL'ini oluşturur.
-        Returns: (authorization_url, state, code_verifier)
-        """
+    
         code_verifier, code_challenge = self.generate_pkce_pair()
-        
+    
         if not state:
             state = base64.urlsafe_b64encode(secrets.token_bytes(16)).rstrip(b'=').decode('utf-8')
 
-        # Temel scope'lar
+        # Scope'ları BOŞLUKLA birleştir
         scopes = [
             "user.info.basic",
-            "user.info.profile",
-            "user.info.stats",
-            "video.list"
+            "video.list"  # Başlangıç için bu ikisi yeterli
         ]
 
         params = {
-            "client_key": self.client_key,
-            "scope": ",".join(scopes),
+            "client_key": self.client_key,  # client_id değil!
+            "scope": " ".join(scopes),      # Boşlukla birleştir
             "response_type": "code",
             "redirect_uri": self.redirect_uri,
             "state": state,
             "code_challenge": code_challenge,
             "code_challenge_method": "S256",
         }
-        
+    
         authorization_url = f"{self.authorization_base_url}?{urlencode(params)}"
-        
+    
         return authorization_url, state, code_verifier
 
     async def get_access_token(self, code: str, code_verifier: str) -> Dict[str, Any]:
-        """
-        Authorization code ve code_verifier ile access token alır.
-        """
+        """Access token al"""
         async with httpx.AsyncClient() as client:
             response = await client.post(
                 self.token_url,
                 data={
-                    "client_key": self.client_key,
+                    "client_key": self.client_key,      # client_id değil!
                     "client_secret": self.client_secret,
                     "code": code,
                     "grant_type": "authorization_code",
                     "redirect_uri": self.redirect_uri,
-                    "code_verifier": code_verifier,  # PKCE
+                    "code_verifier": code_verifier,
                 },
                 headers={"Content-Type": "application/x-www-form-urlencoded"}
             )
