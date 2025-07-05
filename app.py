@@ -20,7 +20,7 @@ TIKTOK_CLIENT_SECRET = "BDPAJngaSW97LPMn0vvNmnmziOQ16fW1"
 
 # Uygulama ayarlarında belirttiğimiz Geri Arama (Callback) URL'i
 # Kodun ve TikTok ayarlarının tutarlı olması çok önemli!
-TIKTOK_REDIRECT_URI = "https://6636-193-140-111-38.ngrok-free.app/api/v1/auth/tiktok/callback"
+TIKTOK_REDIRECT_URI = "https://d744-193-140-111-38.ngrok-free.app/api/v1/auth/tiktok/callback"
 
 # TikTok API endpoint'leri
 AUTHORIZATION_URL = "https://www.tiktok.com/v2/auth/authorize/"

@@ -2,13 +2,18 @@
 
 from datetime import timedelta, datetime
 from fastapi import APIRouter, Depends, HTTPException, status, Request, Query
+from fastapi.responses import RedirectResponse
+from fastapi import Depends
+from fastapi import HTTPException, status
 from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
 from jose import JWTError, jwt
 from typing import Optional
+from urllib.parse import urlencode
 import logging
 import json
+import secrets
 
 from app.schemas.auth import UserCreate, User, Token, TikTokTokenResponse, OAuthCallback
 from app.services.auth_service import auth_service
@@ -82,6 +87,28 @@ async def get_current_user(
     
     return user
 
+@router.get("/login/tiktok")
+async def login_tiktok():
+    state = secrets.token_urlsafe(16)
+    
+    # Kapsamları (scopes) ihtiyacınıza göre düzenleyin
+    scopes = "user.info.basic,video.list" 
+
+    # Parametreleri oluştur
+    params = {
+        'client_key': settings.TIKTOK_CLIENT_KEY,
+        'scope': scopes,
+        'response_type': 'code',
+        'redirect_uri': settings.TIKTOK_REDIRECT_URI,
+        'state': state,
+        # Dokümanlarda isteniyorsa diğer PKCE parametreleri (code_challenge, code_challenge_method) eklenebilir.
+    }
+    
+    # TikTok yetkilendirme URL'ini oluştur
+    tiktok_auth_url = f"https://www.tiktok.com/v2/auth/authorize/?{urlencode(params)}"
+    
+    # Kullanıcıyı bu URL'e yönlendir
+    return RedirectResponse(url=tiktok_auth_url)
 
 @router.post("/register", response_model=User, status_code=status.HTTP_201_CREATED)
 async def register(user: UserCreate, db: AsyncSession = Depends(get_db)):
