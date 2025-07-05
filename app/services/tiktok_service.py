@@ -3,6 +3,7 @@
 import httpx
 from typing import Dict, Any, Optional
 from app.config.settings import settings
+from tenacity import retry, stop_after_attempt, wait_exponential
 
 
 class TikTokAPIService:

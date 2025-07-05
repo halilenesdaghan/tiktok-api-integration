@@ -32,7 +32,7 @@ class Settings(BaseSettings):
     # TIKTOK OAUTH BİLGİLERİ
     TIKTOK_CLIENT_KEY: str ="aw8k3l5unt6zdpz6"
     TIKTOK_CLIENT_SECRET: str ="ZQVJMrekFHwFEArLKVfZ8yeFCNwleNcB"
-    TIKTOK_REDIRECT_URI: str = "https://ed60-193-140-111-38.ngrok-free.app/api/v1/auth/tiktok/callback"
+    TIKTOK_REDIRECT_URI: str = "https://d744-193-140-111-38.ngrok-free.app/api/v1/auth/tiktok/callback"
 
     # TOKEN ŞİFRELEME
     TOKEN_ENCRYPTION_KEY: str = "wHhPZ1SPCxYEzOuWE8oJ-CD29UsbKIrujsaz5G65quQ="

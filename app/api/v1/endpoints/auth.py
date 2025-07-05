@@ -1,7 +1,7 @@
 # app/api/v1/endpoints/auth.py
 
 from datetime import timedelta, datetime
-from fastapi import APIRouter, Depends, HTTPException, status, Request
+from fastapi import APIRouter, Depends, HTTPException, status, Request, Query
 from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
@@ -135,95 +135,71 @@ async def tiktok_authorize(current_user: UserModel = Depends(get_current_user)):
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"Failed to generate authorization URL: {str(e)}")
 
 
-@router.api_route("/tiktok/callback", methods=["GET", "POST"], status_code=status.HTTP_200_OK)
+@router.api_route("/tiktok/callback", methods=["GET", "POST"], summary="Handles TikTok OAuth callback and webhooks")
 async def tiktok_callback_handler(
     request: Request,
     db: AsyncSession = Depends(get_db),
-    callback_data: Optional[OAuthCallback] = None 
+    # GET isteği için query parametrelerini doğrudan al
+    code: Optional[str] = Query(None),
+    state: Optional[str] = Query(None),
+    error: Optional[str] = Query(None),
+    error_description: Optional[str] = Query(None),
+    challenge: Optional[int] = Query(None) # Webhook için challenge
 ):
     """
-    Handles both TikTok's URL verification and the OAuth code exchange.
-    Logs incoming request parameters with colors for easy debugging in Docker.
+    Handles both TikTok's URL verification (via GET with challenge) and the OAuth code exchange (via GET with code and state).
+    Logs incoming request parameters for easy debugging.
     """
-    # --- YENİ EKLENDİ: Gelen isteği renkli loglama ---
     log = ColorLogger.log
     c = ColorLogger
-    
-    log(f"\n{c.BOLD}{c.HEADER}--- TikTok Callback İsteği Alındı ---{c.ENDC}")
-    log(f"{c.CYAN}Zaman:{c.ENDC} {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
-    log(f"{c.CYAN}Metot:{c.ENDC} {c.YELLOW}{request.method}{c.ENDC}")
-    
-    # Query parametrelerini logla
-    query_params = dict(request.query_params)
-    log(f"{c.CYAN}Query Parametreleri:{c.ENDC}")
-    if query_params:
-        for key, value in query_params.items():
-            log(f"  - {c.BLUE}{key}:{c.ENDC} {value}")
-    else:
-        log(f"  {c.YELLOW}(Query parametresi yok){c.ENDC}")
 
-    # Body içeriğini logla (sadece POST için)
-    log(f"{c.CYAN}Body İçeriği (callback_data):{c.ENDC}")
-    if request.method == "POST":
-        if callback_data:
-            # Pydantic modelini dict'e çevirerek güzel bir formatta yazdır
-            body_json = json.dumps(callback_data.dict(), indent=2)
-            log(f"{c.GREEN}{body_json}{c.ENDC}")
-        else:
-             log(f"  {c.YELLOW}(Body içeriği boş veya parse edilemedi){c.ENDC}")
-    else:
-        log(f"  {c.YELLOW}(GET isteği olduğu için body yok){c.ENDC}")
-    log(f"{c.BOLD}{c.HEADER}------------------------------------{c.ENDC}\n")
-    # ----------------------------------------------------
+    log(f"\n{c.BOLD}{c.HEADER}--- TikTok Callback/Webhook Request Received ---{c.ENDC}")
+    log(f"{c.CYAN}Timestamp:{c.ENDC} {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
+    log(f"{c.CYAN}Method:{c.ENDC} {c.YELLOW}{request.method}{c.ENDC}")
+    log(f"{c.CYAN}Query Params:{c.ENDC} {dict(request.query_params)}")
 
-    # 1. URL Doğrulama (Challenge Testi)
-    challenge = request.query_params.get('challenge')
-    if challenge:
-        log(f"{c.GREEN}--> URL Doğrulama (Challenge) isteği algılandı. Challenge: {challenge}{c.ENDC}")
-        return JSONResponse(content={'challenge': int(challenge)})
+    # 1. Webhook URL Doğrulama (Challenge Testi)
+    if request.method == "GET" and challenge is not None:
+        log(f"{c.GREEN}--> URL Verification (Challenge) detected. Challenge: {challenge}{c.ENDC}")
+        return JSONResponse(content={'challenge': challenge})
 
-    # 2. Gerçek OAuth Akışı (Code Exchange)
-    if request.method == "POST":
-        log(f"{c.CYAN}--> OAuth Akışı (Code Exchange) başlatılıyor...{c.ENDC}")
-        if not callback_data or not callback_data.code:
-            error_message = "TikTok'tan gelen callback isteğinde 'code' veya 'state' parametreleri eksik."
-            log(f"{c.RED}HATA: {error_message}{c.ENDC}")
-            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail={"error_code": "CALLBACK_MISSING_PARAMS", "message": error_message})
+    # 2. OAuth Akışı (Code Exchange) - Artık GET ile çalışıyor
+    if request.method == "GET" and code and state:
+        log(f"{c.CYAN}--> OAuth Flow (Code Exchange) initiated...{c.ENDC}")
 
-        if callback_data.error:
-            error_message = f"TikTok OAuth hatası: {callback_data.error_description or callback_data.error}"
-            log(f"{c.RED}HATA: {error_message}{c.ENDC}")
+        if error:
+            error_message = f"TikTok OAuth error: {error_description or error}"
+            log(f"{c.RED}ERROR: {error_message}{c.ENDC}")
             raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail={"error_code": "TIKTOK_OAUTH_ERROR", "message": error_message})
 
         try:
-            cache_key = f"oauth_state:{callback_data.state}"
+            cache_key = f"oauth_state:{state}"
             session_data = await cache_manager.get(cache_key)
             
             if not session_data:
-                error_message = "Geçersiz veya süresi dolmuş OAuth state."
-                log(f"{c.RED}HATA: {error_message}{c.ENDC}")
+                error_message = "Invalid or expired OAuth state. Please try logging in again."
+                log(f"{c.RED}ERROR: {error_message}{c.ENDC}")
                 raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail={"error_code": "INVALID_OR_EXPIRED_STATE", "message": error_message})
             
-            log(f"{c.GREEN}--> Geçerli OAuth state bulundu. Oturum verisi alınıyor...{c.ENDC}")
+            log(f"{c.GREEN}--> Valid OAuth state found. Retrieving session data...{c.ENDC}")
             user_id = session_data.get("user_id")
             code_verifier = session_data.get("code_verifier")
             
             if not user_id or not code_verifier:
-                error_message = "Önbellekteki oturum verisinde 'user_id' veya 'code_verifier' bulunamadı."
-                log(f"{c.RED}HATA: {error_message}{c.ENDC}")
+                error_message = "Could not find 'user_id' or 'code_verifier' in cached session data."
+                log(f"{c.RED}ERROR: {error_message}{c.ENDC}")
                 raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail={"error_code": "INVALID_SESSION_DATA", "message": error_message})
             
-            result = await db.execute(select(UserModel).filter(UserModel.id == user_id))
-            user = result.scalar_one_or_none()
-            
+            user = await db.get(UserModel, user_id)
             if not user:
                 raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found.")
             
-            log(f"{c.CYAN}--> Code, access token ile değiştiriliyor...{c.ENDC}")
-            token_data = await tiktok_oauth_client.get_access_token(code=callback_data.code, code_verifier=code_verifier)
+            log(f"{c.CYAN}--> Exchanging authorization code for an access token...{c.ENDC}")
+            token_data = await tiktok_oauth_client.get_access_token(code=code, code_verifier=code_verifier)
             tiktok_token = TikTokTokenResponse(**token_data)
-            log(f"{c.GREEN}--> Access token başarıyla alındı. Open ID: {tiktok_token.open_id}{c.ENDC}")
+            log(f"{c.GREEN}--> Access token successfully obtained. Open ID: {tiktok_token.open_id}{c.ENDC}")
             
+            # Var olan token'ı bul veya yeni oluştur
             result = await db.execute(select(TokenModel).filter(TokenModel.user_id == user.id, TokenModel.token_type == "tiktok"))
             existing_token = result.scalar_one_or_none()
             
@@ -231,7 +207,7 @@ async def tiktok_callback_handler(
             encrypted_refresh_token = token_encryption.encrypt(tiktok_token.refresh_token)
             
             if existing_token:
-                log(f"{c.CYAN}--> Mevcut token güncelleniyor...{c.ENDC}")
+                log(f"{c.CYAN}--> Updating existing token...{c.ENDC}")
                 existing_token.access_token = encrypted_access_token
                 existing_token.refresh_token = encrypted_refresh_token
                 existing_token.expires_at = datetime.utcnow() + timedelta(seconds=tiktok_token.expires_in)
@@ -239,21 +215,31 @@ async def tiktok_callback_handler(
                 existing_token.scopes = tiktok_token.scope
                 existing_token.is_active = True
             else:
-                log(f"{c.CYAN}--> Yeni token oluşturuluyor ve veritabanına ekleniyor...{c.ENDC}")
-                new_token = TokenModel(user_id=user.id, token_type="tiktok", access_token=encrypted_access_token, refresh_token=encrypted_refresh_token, expires_at=datetime.utcnow() + timedelta(seconds=tiktok_token.expires_in), open_id=tiktok_token.open_id, scopes=tiktok_token.scope, is_active=True)
+                log(f"{c.CYAN}--> Creating and storing a new token...{c.ENDC}")
+                new_token = TokenModel(
+                    user_id=user.id, token_type="tiktok", 
+                    access_token=encrypted_access_token, 
+                    refresh_token=encrypted_refresh_token, 
+                    expires_at=datetime.utcnow() + timedelta(seconds=tiktok_token.expires_in), 
+                    open_id=tiktok_token.open_id, 
+                    scopes=tiktok_token.scope, 
+                    is_active=True
+                )
                 db.add(new_token)
             
             user.tiktok_open_id = tiktok_token.open_id
             await db.commit()
             await cache_manager.delete(cache_key)
             
-            log(f"{c.GREEN}{c.BOLD}--> TikTok hesabı başarıyla bağlandı! (UserID: {user.id}){c.ENDC}")
-            return {"message": "TikTok account connected successfully", "open_id": tiktok_token.open_id, "user_id": user.id}
+            log(f"{c.GREEN}{c.BOLD}--> TikTok account connected successfully! (UserID: {user.id}){c.ENDC}")
+            # Kullanıcıyı başarılı bir sayfaya yönlendir
+            return {"message": "TikTok account connected successfully. You can close this tab."}
             
         except Exception as e:
             await db.rollback()
-            log(f"{c.RED}{c.BOLD}--> BEKLENMEDİK HATA: {str(e)}{c.ENDC}")
+            log(f"{c.RED}{c.BOLD}--> UNEXPECTED ERROR: {str(e)}{c.ENDC}")
             raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"Failed to connect TikTok account: {str(e)}")
 
-    log(f"{c.YELLOW}--> Sadece GET isteği, işlem yapılmadı. Endpoint aktif.{c.ENDC}")
-    return {"message": "TikTok callback endpoint is active."}
+    # Diğer tüm durumlar için varsayılan yanıt
+    log(f"{c.YELLOW}--> Unhandled GET/POST request. Endpoint is active.{c.ENDC}")
+    return {"message": "TikTok callback endpoint is active and waiting for a valid request."}

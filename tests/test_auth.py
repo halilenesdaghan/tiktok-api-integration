@@ -77,6 +77,40 @@ def authenticated_client(client, test_user):
     client.headers = {"Authorization": f"Bearer {token}"}
     return client
 
+@pytest.mark.asyncio
+async def test_tiktok_callback_get_request_success(self, authenticated_client, db, mock_redis):
+    """Test the corrected GET-based OAuth callback flow."""
+    # 1. Authorize endpoint'ini çağırarak state ve verifier'ı cache'e kaydet
+    response = authenticated_client.get("/api/v1/auth/tiktok/authorize")
+    assert response.status_code == 200
+    auth_data = response.json()
+    state = auth_data["state"]
+
+    # 2. TikTok'un geri yönlendirmesini simüle et
+    # Bu aşamada, get_access_token'i mock'lamak gerekir.
+    with patch("app.core.oauth.TikTokOAuth2.get_access_token") as mock_get_token:
+        mock_get_token.return_value = {
+            "access_token": "mock_access_token",
+            "refresh_token": "mock_refresh_token",
+            "open_id": "mock_open_id",
+            "scope": "user.info.basic",
+            "expires_in": 7200,
+            "refresh_expires_in": 86400,
+            "token_type": "Bearer"
+        }
+
+        # Callback URL'e GET isteği yap
+        callback_response = authenticated_client.get(
+            f"/api/v1/auth/tiktok/callback?code=mock_auth_code&state={state}"
+        )
+
+        assert callback_response.status_code == 200
+        assert "TikTok account connected successfully" in callback_response.json()["message"]
+
+        # Veritabanında token'ın kaydedildiğini kontrol et
+        token_in_db = db.query(TokenModel).filter(TokenModel.open_id == "mock_open_id").first()
+        assert token_in_db is not None
+        assert token_in_db.token_type == "tiktok"
 
 class TestAuth:
     """Authentication tests"""

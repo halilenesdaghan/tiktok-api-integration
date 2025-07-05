@@ -80,12 +80,19 @@ class VideoAnalytics(Base):
     
     # Hashtags (JSON array)
     hashtags = Column(JSON, nullable=True)
+
+    # --- EKSİK OLAN VE YENİ EKLENEN BÖLÜM ---
+    insights = relationship(
+        "VideoInsights", 
+        back_populates="video_analytics", 
+        uselist=False, # Bir VideoAnalytics kaydının sadece bir VideoInsights kaydı olur (bire-bir ilişki)
+        cascade="all, delete-orphan" # VideoAnalytics silinirse, bağlı VideoInsights da silinir
+    )
+    # -----------------------------------------
     
     def __repr__(self):
         return f"<VideoAnalytics(id={self.id}, video_id={self.video_id}, views={self.view_count})>"
     
-    # app/models/analytics.py - Ek model
-
 class VideoInsights(Base):
     """
     Video Insights modeli - Commercial API metrikleri
