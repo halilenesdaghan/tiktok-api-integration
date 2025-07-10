@@ -57,7 +57,6 @@ async def get_tiktok_token(user: User, db: AsyncSession) -> str:
     # Token'ı decrypt et
     return token_encryption.decrypt(token.access_token)
 
-
 @router.get("/user/info", response_model=TikTokUserInfo)
 async def get_user_info(
     current_user: User = Depends(get_current_user),
@@ -158,6 +157,65 @@ async def get_user_videos(
             detail=f"Failed to fetch videos: {str(e)}"
         )
 
+@router.get("/analytics/detailed", response_model=dict)
+async def get_detailed_analytics(
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db)
+):
+    """Detaylı TikTok analytics verilerini getir"""
+    access_token = await get_tiktok_token(current_user, db)
+    
+    try:
+        # Get comprehensive engagement metrics
+        engagement_data = await tiktok_integration.get_engagement_metrics(access_token)
+        
+        # Get recent performance (last 7 days)
+        recent_performance = await tiktok_integration.get_recent_performance(access_token, days=7)
+        
+        # Get total video stats
+        video_stats = await tiktok_integration.get_total_video_stats(access_token)
+        
+        return {
+            "success": True,
+            "data": {
+                "account_stats": engagement_data.get("account_stats", {}),
+                "engagement_metrics": engagement_data.get("engagement_data", {}),
+                "recent_performance": recent_performance,
+                "video_totals": video_stats,
+                "top_videos": engagement_data.get("top_videos", []),
+                "commercial_api_data": {
+                    "profile_visits": engagement_data.get("profile_visits", 0),
+                    "profile_visit_rate": engagement_data.get("profile_visit_rate", 0),
+                    "music_clicks": engagement_data.get("music_clicks", 0),
+                    "instant_experience_view_time": engagement_data.get("instant_experience_view_time", 0),
+                    "instant_experience_view_rate": engagement_data.get("instant_experience_view_rate", 0),
+                    "note": engagement_data.get("note", "")
+                }
+            },
+            "timestamp": datetime.utcnow().isoformat()
+        }
+        
+    except Exception as e:
+        return {
+            "success": False,
+            "error": str(e),
+            "data": {
+                "account_stats": {},
+                "engagement_metrics": {},
+                "recent_performance": {},
+                "video_totals": {},
+                "top_videos": [],
+                "commercial_api_data": {
+                    "profile_visits": 0,
+                    "profile_visit_rate": 0,
+                    "music_clicks": 0,
+                    "instant_experience_view_time": 0,
+                    "instant_experience_view_rate": 0,
+                    "note": "Error fetching data"
+                }
+            },
+            "timestamp": datetime.utcnow().isoformat()
+        }
 
 @router.get("/videos/{video_id}", response_model=VideoAnalyticsResponse)
 async def get_video_analytics(
