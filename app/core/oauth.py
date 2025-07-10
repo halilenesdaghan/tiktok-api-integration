@@ -39,14 +39,12 @@ class TikTokOAuth2:
             state = base64.urlsafe_b64encode(secrets.token_bytes(16)).rstrip(b'=').decode('utf-8')
 
         # Scope'ları BOŞLUKLA birleştir
-        scopes = [
-            "user.info.basic",
-            "video.list"  # Başlangıç için bu ikisi yeterli
-        ]
+        scopes = "user.info.basic"  # Başlangıç için bu ikisi yeterli
+        
 
         params = {
             "client_key": self.client_key,  # client_id değil!
-            "scope": " ".join(scopes),      # Boşlukla birleştir
+            "scope": scopes,      # Boşlukla birleştir
             "response_type": "code",
             "redirect_uri": self.redirect_uri,
             "state": state,

@@ -31,7 +31,7 @@ class TestTikTokAPI:
             refresh_token=encrypted_refresh_token,
             expires_at=datetime.utcnow() + timedelta(days=1),
             open_id="test_open_id_123",
-            scopes="user.info.basic,video.list",
+            scopes="user.info.basic",
             is_active=True
         )
         db.add(token)

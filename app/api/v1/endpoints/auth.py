@@ -92,7 +92,7 @@ async def login_tiktok():
     state = secrets.token_urlsafe(16)
     
     # Kapsamları (scopes) ihtiyacınıza göre düzenleyin
-    scopes = "user.info.basic,video.list,artist.certification.read,artist.certification.update,user.info.profile,user.info.stats,video.list" 
+    scopes = "user.info.basic" 
 
     # Parametreleri oluştur
     params = {
@@ -153,6 +153,7 @@ async def health_check():
 @router.get("/tiktok/authorize")
 async def tiktok_authorize(current_user: UserModel = Depends(get_current_user)):
     try:
+        print(f"Generating TikTok authorization URL for user: {current_user.username}")
         auth_url, state, code_verifier = tiktok_oauth_client.get_authorization_url()
         cache_key = f"oauth_state:{state}"
         session_data = {"user_id": current_user.id, "code_verifier": code_verifier, "created_at": datetime.utcnow().isoformat()}

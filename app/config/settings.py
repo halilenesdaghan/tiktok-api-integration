@@ -30,9 +30,9 @@ class Settings(BaseSettings):
     REDIS_URL: str
 
     # TIKTOK OAUTH BİLGİLERİ
-    TIKTOK_CLIENT_KEY: str ="sbawyis5zxfdx5u341"
-    TIKTOK_CLIENT_SECRET: str ="BDPAJngaSW97LPMn0vvNmnmziOQ16fW1"
-    TIKTOK_REDIRECT_URI: str = "https://d744-193-140-111-38.ngrok-free.app/api/v1/auth/tiktok/callback"
+    TIKTOK_CLIENT_KEY: str ="sbawkqw50cnz16abfx"
+    TIKTOK_CLIENT_SECRET: str ="LkJyowu2u9QcoM9L6ZQpA2zx9sJs71Pd"
+    TIKTOK_REDIRECT_URI: str = "https://666ec46d4a76.ngrok-free.app/api/v1/auth/tiktok/callback"
 
     # TOKEN ŞİFRELEME
     TOKEN_ENCRYPTION_KEY: str = "wHhPZ1SPCxYEzOuWE8oJ-CD29UsbKIrujsaz5G65quQ="

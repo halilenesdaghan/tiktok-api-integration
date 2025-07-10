@@ -55,12 +55,7 @@ class TokenData(BaseModel):
 
 # OAuth Schemas
 class OAuthAuthorize(BaseModel):
-    scopes: List[str] = Field(
-        default=[
-            "user.info.basic",
-            "video.list"
-        ]
-    )
+    scopes: str = "user.info.basic"
     state: Optional[str] = None
 
 

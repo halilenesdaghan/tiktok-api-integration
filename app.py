@@ -15,12 +15,12 @@ app.secret_key = os.urandom(24)
 # TikTok'tan alınan ve .env dosyasında saklanan bilgiler
 # Bu bilgileri doğrudan koda yazmak yerine .env dosyasından çekmek daha güvenlidir.
 # os.getenv("TIKTOK_CLIENT_KEY", "sbawyis5zxfdx5u341") şeklinde kullanılabilir.
-TIKTOK_CLIENT_KEY = "sbawyis5zxfdx5u341"
-TIKTOK_CLIENT_SECRET = "BDPAJngaSW97LPMn0vvNmnmziOQ16fW1"
+TIKTOK_CLIENT_KEY = "sbawkqw50cnz16abfx"
+TIKTOK_CLIENT_SECRET = "LkJyowu2u9QcoM9L6ZQpA2zx9sJs71Pd"
 
 # Uygulama ayarlarında belirttiğimiz Geri Arama (Callback) URL'i
 # Kodun ve TikTok ayarlarının tutarlı olması çok önemli!
-TIKTOK_REDIRECT_URI = "https://d744-193-140-111-38.ngrok-free.app/api/v1/auth/tiktok/callback"
+TIKTOK_REDIRECT_URI = "https://666ec46d4a76.ngrok-free.app/api/v1/auth/tiktok/callback"
 
 # TikTok API endpoint'leri
 AUTHORIZATION_URL = "https://www.tiktok.com/v2/auth/authorize/"
@@ -58,7 +58,7 @@ def tiktok_login():
     # --- GÜNCELLEME ---
     # 1. Hata almamak için öncelikle sadece onay gerektirmeyen 'user.info.basic' iznini istiyoruz.
     # 2. İzinleri virgül yerine boşlukla ayırıyoruz (OAuth 2.0 standardı).
-    scopes = "user.info.basic,video.list,artist.certification.read,artist.certification.update,user.info.profile,user.info.stats"
+    scopes = "user.info.basics"  # Başlangıç için bu ikisi yeterli
 
     # TikTok Developer Portal'dan 'video.list' ve 'video.insights' için onay aldıktan sonra
     # aşağıdaki satırı kullanabilirsiniz:

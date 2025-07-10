@@ -27,7 +27,7 @@ class TestSettings(Settings):
     # Test TikTok credentials
     TIKTOK_CLIENT_KEY: str = "test_client_key"
     TIKTOK_CLIENT_SECRET: str = "test_client_secret"
-    TIKTOK_REDIRECT_URI: str = "http://localhost:8000/auth/tiktok/callback"
+    TIKTOK_REDIRECT_URI: str = "https://666ec46d4a76.ngrok-free.app/api/v1/auth/tiktok/callback"
     
     # Test security keys
     SECRET_KEY: str = "test-secret-key-for-testing-only-32-chars-long!"

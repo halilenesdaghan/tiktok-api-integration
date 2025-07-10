@@ -226,7 +226,7 @@ class TestAuth:
         """Test TikTok authorization URL generation"""
         response = authenticated_client.get(
             f"/api/v1/auth/tiktok/authorize",
-            params={"scopes": "user.info.basic,video.list"}
+            params={"scopes": "user.info.basic"}
         )
         assert response.status_code == 200
         data = response.json()
