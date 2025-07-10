@@ -28,6 +28,20 @@ help:
 	@echo "  make docker-build - Build Docker images"
 	@echo ""
 
+# Shortcuts
+run: dev
+t: test
+f: format
+l: lint
+m: migrate
+
+# TikTok Analytics Test
+test-tiktok:
+	python scripts/test_tiktok_analytics.py
+
+test-tiktok-docker:
+	docker-compose exec web python scripts/test_tiktok_analytics.py
+
 # Installation
 install:
 	pip install --upgrade pip
